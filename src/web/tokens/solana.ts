@@ -103,18 +103,18 @@ export default class SolanaConfig extends BaseWebToken {
 
   async sendTx(data: any): Promise<string | undefined> {
     const connection = await this.getProvider();
-    const signed = await this.wallet.signTransaction(data);
+    const signed: Transaction = await this.wallet.signTransaction(data);
 
     const blockhash = await connection.getLatestBlockhash();
     let blockheight = await connection.getBlockHeight("confirmed");
-
-    const signature = await connection.sendTransaction(signed);
+    const serialized = signed.serialize();
+    const signature = await connection.sendRawTransaction(serialized);
     let resolved = false;
     const confPromise = connection.confirmTransaction({ signature, ...blockhash }, this.finality);
 
     while (blockheight < blockhash.lastValidBlockHeight && !resolved) {
       try {
-        await connection.sendTransaction(signed);
+        await connection.sendRawTransaction(serialized);
         await sleep(500);
       } catch (err: any) {
         if (err.message.includes("This transaction has already been processed")) {
