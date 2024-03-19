@@ -1,5 +1,5 @@
 {
-  "name": "@irys/sdk",
+  "name": "@xindragons/irys-sdk",
   "version": "0.1.16",
   "description": "JS client for Irys",
   "repository": "https://github.com/Bundlr-Network/js-client.git",

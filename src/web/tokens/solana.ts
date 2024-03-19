@@ -5,14 +5,16 @@ import type { TokenConfig, Tx } from "../../common/types";
 import BaseWebToken from "../token";
 import bs58 from "bs58";
 // @ts-expect-error only importing as type
-import type { MessageSignerWalletAdapter } from "@solana/wallet-adapter-base";
+import type { BaseSignerWalletAdapter } from "@solana/wallet-adapter-base";
 import retry from "async-retry";
 import type { Finality } from "@solana/web3.js";
 import { Connection, PublicKey, SystemProgram, Transaction } from "@solana/web3.js";
 
+const sleep = async (ms: number) => new Promise((resolve) => setTimeout(resolve, ms));
+
 export default class SolanaConfig extends BaseWebToken {
   private signer!: HexInjectedSolanaSigner;
-  protected declare wallet: MessageSignerWalletAdapter;
+  protected declare wallet: BaseSignerWalletAdapter;
   minConfirm = 1;
   protected finality: Finality = "finalized";
 
@@ -100,6 +102,36 @@ export default class SolanaConfig extends BaseWebToken {
   }
 
   async sendTx(data: any): Promise<string | undefined> {
+    const connection = await this.getProvider();
+    const signed = await this.wallet.signTransaction(data);
+
+    const blockhash = await connection.getLatestBlockhash();
+    let blockheight = await connection.getBlockHeight("confirmed");
+
+    const signature = await connection.sendTransaction(signed);
+    let resolved = false;
+    const confPromise = connection.confirmTransaction({ signature, ...blockhash }, this.finality);
+
+    while (blockheight < blockhash.lastValidBlockHeight && !resolved) {
+      try {
+        await connection.sendTransaction(signed);
+        await sleep(500);
+      } catch (err: any) {
+        if (err.message.includes("This transaction has already been processed")) {
+          resolved = true;
+        } else {
+          console.log(err);
+        }
+      }
+      blockheight = await connection.getBlockHeight();
+    }
+
+    const conf = await confPromise;
+
+    if (conf.value.err) {
+      throw new Error("Error confirming transaction");
+    }
+
     return await this.wallet.sendTransaction(data, await this.getProvider(), { skipPreflight: true });
   }
 
