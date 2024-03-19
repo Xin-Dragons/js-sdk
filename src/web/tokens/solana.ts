@@ -114,6 +114,7 @@ export default class SolanaConfig extends BaseWebToken {
 
     while (blockheight < blockhash.lastValidBlockHeight && !resolved) {
       try {
+        console.log("sending again");
         await connection.sendRawTransaction(serialized);
         await sleep(500);
       } catch (err: any) {
@@ -132,7 +133,7 @@ export default class SolanaConfig extends BaseWebToken {
       throw new Error("Error confirming transaction");
     }
 
-    return await this.wallet.sendTransaction(data, await this.getProvider(), { skipPreflight: true });
+    return signature;
   }
 
   async createTx(amount: BigNumber.Value, to: string, _fee?: string): Promise<{ txId: string | undefined; tx: any }> {
