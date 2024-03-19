@@ -8,7 +8,7 @@ import bs58 from "bs58";
 import type { BaseSignerWalletAdapter } from "@solana/wallet-adapter-base";
 import retry from "async-retry";
 import type { Finality } from "@solana/web3.js";
-import { Connection, PublicKey, SystemProgram, Transaction } from "@solana/web3.js";
+import { ComputeBudgetProgram, Connection, PublicKey, SystemProgram, Transaction } from "@solana/web3.js";
 
 const sleep = async (ms: number) => new Promise((resolve) => setTimeout(resolve, ms));
 
@@ -153,6 +153,7 @@ export default class SolanaConfig extends BaseWebToken {
     );
     // const transaction = new Transaction({ recentBlockhash: blockHashInfo.blockhash, feePayer: pubkey });
     const transaction = new Transaction({ ...blockHashInfo, feePayer: pubkey });
+    transaction.add(ComputeBudgetProgram.setComputeUnitPrice({ microLamports: 100_000 }));
     transaction.add(
       SystemProgram.transfer({
         fromPubkey: pubkey,
